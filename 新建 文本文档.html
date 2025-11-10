@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黑客风博客系统</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #00ff99;
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #00ff99;
+      text-shadow: 0 0 10px #00ff99;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      border: 2px solid #00ff99;
+      border-radius: 10px;
+      padding: 20px;
+      background: rgba(0, 20, 0, 0.9);
+      box-shadow: 0 0 20px #00ff99;
+    }
+    .login-box, .post-editor {
+      display: none;
+      background: rgba(0, 20, 0, 0.95);
+      border: 2px solid #00ff99;
+      border-radius: 10px;
+      padding: 20px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 400px;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+    }
+    input, textarea, button {
+      width: 100%;
+      background-color: #000;
+      color: #00ff99;
+      border: 1px solid #00ff99;
+      padding: 10px;
+      margin-top: 10px;
+      font-family: 'Courier New', monospace;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #00ff99;
+      color: #000;
+      cursor: pointer;
+      box-shadow: 0 0 10px #00ff99;
+    }
+    .toolbar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .toolbar button {
+      margin: 0 10px;
+    }
+    .post {
+      border-top: 1px dashed #00ff99;
+      padding: 10px 0;
+      cursor: pointer;
+    }
+    .post img {
+      max-width: 100%;
+      border: 1px solid #00ff99;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 99;
+    }
+  </style>
+</head>
+<body>
+  <h1>黑客风博客系统</h1>
+  <div class="container">
+    <div class="toolbar">
+      <button onclick="openLogin()">登录</button>
+      <button onclick="openEditor()">发布文章</button>
+    </div>
+
+    <div id="posts"></div>
+  </div>
+
+  <!-- 登录窗口 -->
+  <div class="overlay" id="overlay" onclick="closeAll()"></div>
+  <div class="login-box" id="loginBox">
+    <h3>用户登录</h3>
+    <input type="text" id="username" placeholder="用户名">
+    <input type="password" id="password" placeholder="密码">
+    <button onclick="login()">登录</button>
+  </div>
+
+  <!-- 发布文章窗口 -->
+  <div class="post-editor" id="editorBox">
+    <h3>发布新文章</h3>
+    <input type="text" id="title" placeholder="标题">
+    <textarea id="content" rows="4" placeholder="内容"></textarea>
+    <input type="file" id="image" accept="image/*">
+    <button onclick="publish()">发布</button>
+  </div>
+
+  <script>
+    let posts = JSON.parse(localStorage.getItem('posts')) || [];
+    let currentUser = localStorage.getItem('user') || null;
+
+    function renderPosts() {
+      const container = document.getElementById('posts');
+      container.innerHTML = '';
+      if (posts.length === 0) {
+        container.innerHTML = '<p style=\"text-align:center;\">暂无文章</p>';
+        return;
+      }
+      posts.forEach((p, index) => {
+        const div = document.createElement('div');
+        div.classList.add('post');
+        div.innerHTML = `<h2>${p.title}</h2><p>${p.author}</p>${p.image ? `<img src=\"${p.image}\">` : ''}`;
+        div.onclick = () => openPost(index);
+        container.appendChild(div);
+      });
+    }
+
+    function openPost(index) {
+      const p = posts[index];
+      const newWindow = window.open('', '_blank');
+      newWindow.document.write(`
+        <html><head><title>${p.title}</title></head>
+        <body style='background:black;color:#00ff99;font-family:Courier New;padding:20px;'>
+          <h1>${p.title}</h1>
+          <p>作者: ${p.author}</p>
+          ${p.image ? `<img src='${p.image}' style='max-width:100%;border:1px solid #00ff99;border-radius:10px;'>` : ''}
+          <p style='margin-top:20px;white-space:pre-line;'>${p.content}</p>
+        </body></html>
+      `);
+    }
+
+    function openLogin() {
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('loginBox').style.display = 'block';
+    }
+
+    function openEditor() {
+      if (!currentUser) return alert('请先登录！');
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('editorBox').style.display = 'block';
+    }
+
+    function closeAll() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('editorBox').style.display = 'none';
+    }
+
+    function login() {
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      if (!u || !p) return alert('请输入完整信息！');
+      localStorage.setItem('user', u);
+      currentUser = u;
+      alert(`欢迎回来，${u}`);
+      closeAll();
+    }
+
+    function publish() {
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const file = document.getElementById('image').files[0];
+      if (!title || !content) return alert('请填写完整内容！');
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const newPost = {
+          title,
+          content,
+          author: currentUser,
+          image: e.target.result || null
+        };
+        posts.unshift(newPost);
+        localStorage.setItem('posts', JSON.stringify(posts));
+        alert('发布成功！');
+        closeAll();
+        renderPosts();
+      };
+      if (file) reader.readAsDataURL(file);
+      else reader.onload({target:{result:null}});
+    }
+
+    renderPosts();
+  </script>
+</body>
+</html>
